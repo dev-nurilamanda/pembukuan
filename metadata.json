@@ -1,0 +1,6 @@
+{
+  "name": "Kasir Mandiri PWA",
+  "description": "Aplikasi Kasir Mandiri & Pembukuan Cepat 100% Offline-First dengan Dexie.js IndexedDB",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
