@@ -132,11 +132,11 @@ export const OrdersAndDebts: React.FC = () => {
             const isUnpaid = t.paymentStatus === 'UNPAID';
 
             return (
-              <div key={t.id} className="p-3.5 hover:bg-slate-50 transition flex items-center justify-between gap-3">
-                <div className="min-w-0 space-y-0.5">
-                  <div className="flex items-center gap-1.5">
+              <div key={t.id} className="px-4 py-4.5 sm:py-5 hover:bg-slate-50 transition flex items-center justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                  <div className="flex items-center gap-2">
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md ${
                         isUnpaid
                           ? 'bg-slate-100 text-slate-800 border border-slate-300'
                           : 'bg-slate-100 text-slate-600'
@@ -144,42 +144,42 @@ export const OrdersAndDebts: React.FC = () => {
                     >
                       {isUnpaid ? 'BELUM LUNAS' : 'LUNAS'}
                     </span>
-                    <span className="text-[11px] text-slate-400 font-mono">
+                    <span className="text-xs text-slate-400 font-mono">
                       {formatDateTime(t.date)}
                     </span>
                   </div>
 
-                  <h4 className="font-semibold text-slate-900 text-sm truncate">
+                  <h4 className="font-semibold text-slate-900 text-base truncate">
                     {t.productName}
                   </h4>
 
                   {t.customerTarget && (
-                    <p className="text-xs text-slate-600 font-medium truncate">
+                    <p className="text-sm text-slate-600 font-medium truncate">
                       Tujuan: <span className="font-semibold text-slate-800">{t.customerTarget}</span>
                     </p>
                   )}
 
-                  <div className="text-[11px] text-slate-500 flex items-center gap-2">
+                  <div className="text-xs text-slate-500 flex items-center gap-2">
                     <span>Modal: {formatRupiah(t.costPrice)}</span>
                     <span>•</span>
                     <span className="text-slate-800 font-medium">Laba: +{formatRupiah(t.profit)}</span>
                   </div>
                 </div>
 
-                <div className="text-right shrink-0 space-y-1.5">
-                  <div className="text-sm font-bold text-slate-900">
+                <div className="text-right shrink-0 space-y-2">
+                  <div className="text-base font-bold text-slate-900">
                     {formatRupiah(t.sellingPrice)}
                   </div>
 
                   {isUnpaid ? (
                     <button
                       onClick={() => handleOpenSettle(t)}
-                      className="px-3 py-1 bg-slate-900 active:bg-black text-white font-bold rounded-lg text-xs shadow-2xs cursor-pointer transition"
+                      className="px-3.5 py-1.5 bg-slate-900 active:bg-black text-white font-bold rounded-xl text-xs shadow-2xs cursor-pointer transition"
                     >
                       Lunasi
                     </button>
                   ) : (
-                    <span className="text-[10px] text-slate-400 font-medium block">
+                    <span className="text-xs text-slate-400 font-medium block">
                       {t.paymentMethod}
                     </span>
                   )}

@@ -195,26 +195,26 @@ export const WalletList: React.FC = () => {
               <div
                 key={wallet.id}
                 onClick={() => handleOpenEdit(wallet)}
-                className="group flex items-center justify-between p-3.5 hover:bg-slate-50 active:bg-slate-100/80 transition cursor-pointer select-none"
+                className="group flex items-center justify-between px-4 py-4.5 sm:py-5 hover:bg-slate-50 active:bg-slate-100/80 transition cursor-pointer select-none"
               >
                 {/* Kiri: Ikon & Nama */}
-                <div className="flex items-center gap-3 min-w-0 pr-2">
-                  <div className={`p-2.5 rounded-xl bg-slate-100 text-slate-800 shrink-0`}>
-                    <Icon className="w-4 h-4" />
+                <div className="flex items-center gap-3.5 min-w-0 pr-3">
+                  <div className={`w-12 h-12 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center shrink-0`}>
+                    <Icon className="w-5 h-5" />
                   </div>
-                  <div className="min-w-0">
-                    <span className="font-bold text-slate-900 text-sm truncate block group-hover:text-black transition">
+                  <div className="min-w-0 space-y-0.5">
+                    <span className="font-semibold text-slate-900 text-base truncate block group-hover:text-black transition">
                       {wallet.name}
                     </span>
-                    <span className="text-[11px] text-slate-500 font-medium">
+                    <span className="text-xs text-slate-500 font-medium">
                       {meta.label}
                     </span>
                   </div>
                 </div>
 
                 {/* Kanan: Nominal Saldo & Aksi Kecil */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-bold text-slate-900 tracking-tight">
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <span className="text-base font-bold text-slate-900 tracking-tight">
                     {formatRupiah(wallet.currentBalance)}
                   </span>
 

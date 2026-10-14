@@ -103,17 +103,17 @@ export default function App() {
 
       {/* 1. HEADER ATAS (Putih Bersih Monokrom Menyatu dengan Layar HP) */}
       <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between gap-3">
+        <div className="max-w-md mx-auto px-4 py-3.5 flex items-center justify-between gap-3">
           {/* Kiri: Hamburger Menu */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <button
               onClick={() => setIsDrawerOpen(true)}
-              className="p-1.5 -ml-1.5 text-slate-800 hover:text-black active:bg-slate-100 rounded-lg transition cursor-pointer"
+              className="p-2 -ml-1 text-slate-800 hover:text-black active:bg-slate-100 rounded-xl transition cursor-pointer"
               title="Menu Navigasi"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-5 h-5 stroke-[2.2]" />
             </button>
-            <h1 className="font-extrabold text-base tracking-tight text-slate-900">
+            <h1 className="font-extrabold text-lg tracking-tight text-slate-900">
               {activeView === 'cashier'
                 ? 'Kasir'
                 : activeView === 'wallets'
@@ -123,18 +123,18 @@ export default function App() {
           </div>
 
           {/* Kanan: Search Icon & Offline Indicator */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {activeView === 'cashier' && subTab === 'katalog' && (
               <button
                 onClick={() => setIsSearchActive(!isSearchActive)}
-                className={`p-1.5 rounded-lg transition cursor-pointer ${
+                className={`p-2 rounded-xl transition cursor-pointer ${
                   isSearchActive
                     ? 'bg-slate-100 text-slate-900'
                     : 'text-slate-700 hover:text-black active:bg-slate-100'
                 }`}
                 title="Cari Produk"
               >
-                {isSearchActive ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
+                {isSearchActive ? <X className="w-5 h-5" /> : <Search className="w-5 h-5 stroke-[2.2]" />}
               </button>
             )}
 
@@ -151,36 +151,36 @@ export default function App() {
 
         {/* Expandable Search Input Bar */}
         {isSearchActive && activeView === 'cashier' && (
-          <div className="max-w-md mx-auto px-4 pb-3 animate-in fade-in slide-in-from-top-1 duration-100">
+          <div className="max-w-md mx-auto px-4 pb-3.5 animate-in fade-in slide-in-from-top-1 duration-100">
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
               <input
                 type="text"
                 autoFocus
                 placeholder="Cari nama produk / token..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-100 text-slate-900 placeholder:text-slate-400 pl-9 pr-8 py-2 rounded-lg text-xs font-medium focus:outline-none focus:ring-1 focus:ring-slate-900"
+                className="w-full bg-slate-100 text-slate-900 placeholder:text-slate-400 pl-10 pr-9 py-2.5 rounded-xl text-sm font-medium focus:outline-none focus:ring-1 focus:ring-slate-900"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4 h-4" />
                 </button>
               )}
             </div>
           </div>
         )}
 
-        {/* 2. SUB-TAB SEDERHANA: KATALOG | MANUAL | PESANAN (Underline Indicator Simpel) */}
+        {/* 2. SUB-TAB SEDERHANA: KATALOG | MANUAL | PESANAN (Underline Indicator Lega) */}
         {activeView === 'cashier' && (
           <div className="border-t border-slate-100 bg-white">
             <div className="max-w-md mx-auto flex items-center px-4">
               <button
                 onClick={() => setSubTab('katalog')}
-                className={`flex-1 py-2.5 text-xs font-semibold text-center transition cursor-pointer border-b-2 ${
+                className={`flex-1 py-3 text-sm font-semibold text-center transition cursor-pointer border-b-2 ${
                   subTab === 'katalog'
                     ? 'border-slate-900 text-slate-900 font-bold'
                     : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -191,7 +191,7 @@ export default function App() {
 
               <button
                 onClick={() => setSubTab('manual')}
-                className={`flex-1 py-2.5 text-xs font-semibold text-center transition cursor-pointer border-b-2 ${
+                className={`flex-1 py-3 text-sm font-semibold text-center transition cursor-pointer border-b-2 ${
                   subTab === 'manual'
                     ? 'border-slate-900 text-slate-900 font-bold'
                     : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -202,7 +202,7 @@ export default function App() {
 
               <button
                 onClick={() => setSubTab('pesanan')}
-                className={`flex-1 py-2.5 text-xs font-semibold text-center transition cursor-pointer border-b-2 flex items-center justify-center gap-1.5 ${
+                className={`flex-1 py-3 text-sm font-semibold text-center transition cursor-pointer border-b-2 flex items-center justify-center gap-1.5 ${
                   subTab === 'pesanan'
                     ? 'border-slate-900 text-slate-900 font-bold'
                     : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -210,7 +210,7 @@ export default function App() {
               >
                 <span>Pesanan</span>
                 {unpaidCount > 0 && (
-                  <span className="px-1.5 py-0.2 bg-slate-900 text-white text-[10px] font-bold rounded-full">
+                  <span className="px-2 py-0.5 bg-slate-900 text-white text-[11px] font-bold rounded-full">
                     {unpaidCount}
                   </span>
                 )}
