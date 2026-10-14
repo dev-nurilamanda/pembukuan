@@ -159,8 +159,13 @@ export const OrdersAndDebts: React.FC = () => {
                     </span>
                   </div>
 
-                  <h4 className="font-semibold text-slate-900 text-base truncate">
-                    {t.productName}
+                  <h4 className="font-semibold text-slate-900 text-base truncate flex items-center gap-1.5">
+                    <span className="truncate">{t.productName}</span>
+                    {t.quantity && t.quantity > 1 ? (
+                      <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shrink-0">
+                        {t.quantity}x
+                      </span>
+                    ) : null}
                   </h4>
 
                   {t.customerTarget && (

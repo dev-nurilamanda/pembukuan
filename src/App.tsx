@@ -11,9 +11,12 @@ import {
   CheckCircle2,
   WifiOff,
   Plus,
+  ShoppingCart,
+  ArrowRight,
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, seedDefaultWallets, seedDefaultProducts, type Product } from './db/db';
+import { type CartItem } from './db/transactionService';
 import { CashierCatalog } from './components/CashierCatalog';
 import { ManualCashier } from './components/ManualCashier';
 import { OrdersAndDebts } from './components/OrdersAndDebts';
@@ -23,6 +26,7 @@ import { DrawerMenu } from './components/DrawerMenu';
 import { WalletList } from './components/WalletList';
 import { ProductManagement } from './components/ProductManagement';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
+import { formatRupiah } from './utils/formatters';
 
 export default function App() {
   const [activeView, setActiveView] = useState<'cashier' | 'wallets' | 'debts' | 'products'>('cashier');
@@ -31,14 +35,8 @@ export default function App() {
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Checkout Bottom Sheet state
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [manualItem, setManualItem] = useState<{
-    name: string;
-    costPrice: number;
-    sellingPrice: number;
-    category?: string;
-  } | null>(null);
+  // Cart State (Keranjang Belanja POS)
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   // Create Product Modal state
@@ -74,29 +72,151 @@ export default function App() {
     };
   }, []);
 
-  const handleSelectProduct = (product: Product) => {
-    setSelectedProduct(product);
-    setManualItem(null);
-    setIsCheckoutOpen(true);
+  // Handler Tambah Produk ke Keranjang
+  const handleAddToCart = (product: Product) => {
+    const isPhysical = Boolean(product.isPhysical ?? product.trackStock);
+
+    if (isPhysical && product.stock <= 0) {
+      setSuccessToast(`Stok ${product.name} telah habis.`);
+      setTimeout(() => setSuccessToast(null), 2500);
+      return;
+    }
+
+    setCart((prevCart) => {
+      const existingIdx = prevCart.findIndex((item) => item.productId === product.id);
+
+      if (existingIdx >= 0) {
+        const existing = prevCart[existingIdx];
+        if (isPhysical && existing.quantity >= product.stock) {
+          setSuccessToast(`Batas stok ${product.name} tercapai (${product.stock} unit).`);
+          setTimeout(() => setSuccessToast(null), 2500);
+          return prevCart;
+        }
+
+        const updated = [...prevCart];
+        updated[existingIdx] = {
+          ...existing,
+          quantity: existing.quantity + 1,
+        };
+        return updated;
+      }
+
+      // Tentukan outWalletId bawaan produk
+      let outWallet = product.defaultWalletId;
+      if (!outWallet) {
+        outWallet = isPhysical ? 'cash_main' : 'server_digipos';
+      }
+
+      const newItem: CartItem = {
+        id: `cart-${product.id}-${Date.now()}`,
+        productId: product.id,
+        productName: product.name,
+        serverChannel: product.serverChannel || product.category || 'Toko Fisik',
+        category: product.category,
+        costPrice: product.costPrice,
+        sellingPrice: product.sellingPrice,
+        quantity: 1,
+        isPhysical,
+        stock: product.stock,
+        outWalletId: outWallet,
+        product,
+      };
+
+      return [...prevCart, newItem];
+    });
   };
 
-  const handleProceedManual = (item: {
+  // Handler Update Qty di Keranjang
+  const handleUpdateCartQuantity = (cartItemId: string, newQty: number) => {
+    if (newQty <= 0) {
+      handleRemoveFromCart(cartItemId);
+      return;
+    }
+
+    setCart((prevCart) =>
+      prevCart.map((item) => {
+        if (item.id !== cartItemId) return item;
+        const maxQty = item.isPhysical ? item.stock : 9999;
+        return {
+          ...item,
+          quantity: Math.min(newQty, maxQty),
+        };
+      })
+    );
+  };
+
+  // Handler Hapus 1 Item dari Keranjang
+  const handleRemoveFromCart = (cartItemId: string) => {
+    setCart((prevCart) => prevCart.filter((item) => item.id !== cartItemId));
+  };
+
+  // Handler Kosongkan Keranjang
+  const handleClearCart = () => {
+    setCart([]);
+  };
+
+  // Handler Tambah Transaksi Manual ke Keranjang
+  const handleManualAddToCart = (item: {
     name: string;
     costPrice: number;
     sellingPrice: number;
     category?: string;
   }) => {
-    setManualItem(item);
-    setSelectedProduct(null);
+    const newItem: CartItem = {
+      id: `cart-manual-${Date.now()}`,
+      productName: item.name,
+      serverChannel: 'Manual',
+      category: item.category || 'Transaksi Bebas',
+      costPrice: item.costPrice,
+      sellingPrice: item.sellingPrice,
+      quantity: 1,
+      isPhysical: false,
+      stock: 9999,
+      outWalletId: 'cash_main',
+    };
+
+    setCart((prev) => [...prev, newItem]);
+    setSuccessToast(`"${item.name}" berhasil masuk keranjang.`);
+    setTimeout(() => setSuccessToast(null), 2500);
+  };
+
+  // Handler Transaksi Manual Bayar Langsung
+  const handleManualProceedDirect = (item: {
+    name: string;
+    costPrice: number;
+    sellingPrice: number;
+    category?: string;
+  }) => {
+    const newItem: CartItem = {
+      id: `cart-manual-${Date.now()}`,
+      productName: item.name,
+      serverChannel: 'Manual',
+      category: item.category || 'Transaksi Bebas',
+      costPrice: item.costPrice,
+      sellingPrice: item.sellingPrice,
+      quantity: 1,
+      isPhysical: false,
+      stock: 9999,
+      outWalletId: 'cash_main',
+    };
+
+    setCart((prev) => [...prev, newItem]);
     setIsCheckoutOpen(true);
   };
 
-  const handleCheckoutSuccess = (txnId: string) => {
-    setSuccessToast(`Transaksi berhasil dicatat (${txnId})`);
+  // Handler Transaksi Selesai
+  const handleCheckoutSuccess = (summary: string) => {
+    setSuccessToast(summary);
     setTimeout(() => {
       setSuccessToast(null);
-    }, 3000);
+    }, 3500);
   };
+
+  // Total Finansial Keranjang untuk Floating Bar
+  const totalCartQty = cart.reduce((sum, i) => sum + i.quantity, 0);
+  const totalCartCost = cart.reduce((sum, i) => sum + i.costPrice * i.quantity, 0);
+  const totalCartSelling = cart.reduce((sum, i) => sum + i.sellingPrice * i.quantity, 0);
+  const totalCartProfit = totalCartSelling - totalCartCost;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-slate-900 selection:text-white">
@@ -136,6 +256,19 @@ export default function App() {
               >
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Tambah</span>
+              </button>
+            )}
+
+            {activeView === 'cashier' && cart.length > 0 && (
+              <button
+                onClick={() => setIsCheckoutOpen(true)}
+                className="relative p-2 text-slate-800 hover:text-black active:bg-slate-100 rounded-xl transition cursor-pointer"
+                title="Buka Keranjang"
+              >
+                <ShoppingCart className="w-5 h-5 stroke-[2.2]" />
+                <span className="absolute -top-0.5 -right-0.5 bg-rose-600 text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-white">
+                  {cart.length}
+                </span>
               </button>
             )}
 
@@ -189,7 +322,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 2. SUB-TAB SEDERHANA: KATALOG | MANUAL | PESANAN (Underline Indicator Lega) */}
+        {/* 2. SUB-TAB SEDERHANA: KATALOG | MANUAL | PESANAN */}
         {activeView === 'cashier' && (
           <div className="border-t border-slate-100 bg-white">
             <div className="max-w-md mx-auto flex items-center px-4">
@@ -243,14 +376,16 @@ export default function App() {
         </div>
       )}
 
-      {/* 3. MAIN CONTENT CONTAINER (Lebar & Padding Standar max-w-md mx-auto px-4 py-0 Identik 100%) */}
+      {/* 3. MAIN CONTENT CONTAINER */}
       <main className="flex-1 w-full overflow-x-hidden max-w-md mx-auto px-4 py-0">
         {activeView === 'cashier' ? (
           <>
             {subTab === 'katalog' && (
               <CashierCatalog
                 searchQuery={searchQuery}
-                onSelectProduct={handleSelectProduct}
+                cart={cart}
+                onAddToCart={handleAddToCart}
+                onUpdateCartQuantity={handleUpdateCartQuantity}
                 onOpenCreateModal={() => setIsCreateProductOpen(true)}
                 onOpenProductManagement={() => setActiveView('products')}
               />
@@ -258,7 +393,10 @@ export default function App() {
 
             {subTab === 'manual' && (
               <div className="py-3">
-                <ManualCashier onProceedManual={handleProceedManual} />
+                <ManualCashier
+                  onAddToCart={handleManualAddToCart}
+                  onProceedDirect={handleManualProceedDirect}
+                />
               </div>
             )}
 
@@ -277,12 +415,53 @@ export default function App() {
         )}
       </main>
 
-      {/* Bottom Sheet Kasir Ringkas (<10 detik) */}
+      {/* 4. FLOATING BOTTOM CART BAR (Bar Keranjang Melayang di Bawah - Cepat & Praktis) */}
+      {activeView === 'cashier' && cart.length > 0 && !isCheckoutOpen && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl animate-in slide-in-from-bottom duration-150">
+          <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between gap-3">
+            {/* Kiri: Ringkasan Item & Total Bayar */}
+            <div
+              onClick={() => setIsCheckoutOpen(true)}
+              className="flex items-center gap-3 cursor-pointer min-w-0 flex-1"
+            >
+              <div className="relative w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-xs shrink-0">
+                <ShoppingCart className="w-5 h-5 stroke-[2.2]" />
+                <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[11px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-2xs">
+                  {totalCartQty}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-slate-500 flex items-center gap-1.5 truncate">
+                  <span>{cart.length} Produk ({totalCartQty} pcs)</span>
+                  <span>•</span>
+                  <span className="text-emerald-600 font-bold">Laba +{formatRupiah(totalCartProfit)}</span>
+                </div>
+                <div className="font-black text-slate-900 text-lg leading-tight tracking-tight">
+                  {formatRupiah(totalCartSelling)}
+                </div>
+              </div>
+            </div>
+
+            {/* Kanan: Tombol Bayar / Buka Keranjang */}
+            <button
+              onClick={() => setIsCheckoutOpen(true)}
+              className="px-5 py-3 bg-slate-900 hover:bg-black active:scale-95 text-white font-bold text-sm rounded-xl flex items-center gap-2 shadow-md transition cursor-pointer shrink-0"
+            >
+              <span>Bayar</span>
+              <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 5. MODAL KERANJANG & CHECKOUT BOTTOM SHEET */}
       <CheckoutBottomSheet
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
-        product={selectedProduct}
-        manualItem={manualItem}
+        cart={cart}
+        onUpdateQuantity={handleUpdateCartQuantity}
+        onRemoveItem={handleRemoveFromCart}
+        onClearCart={handleClearCart}
         onSuccess={handleCheckoutSuccess}
       />
 

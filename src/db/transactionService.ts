@@ -44,6 +44,7 @@ export async function executeCashierTransaction(
     paymentStatus: payload.paymentStatus,
     paymentMethod: payload.paymentMethod,
     notes: payload.notes?.trim() || undefined,
+    quantity: qty,
   };
 
   await db.transaction('rw', [db.wallets, db.products, db.transactions, db.customers], async () => {
@@ -121,4 +122,120 @@ export async function settleUnpaidTransaction(
       notes: txn.notes ? `${txn.notes} (Dilunasi ${new Date().toLocaleDateString('id-ID')})` : `Dilunasi ${new Date().toLocaleDateString('id-ID')}`,
     });
   });
+}
+
+export interface CartItem {
+  id: string; // unique item id in cart
+  productId?: number;
+  productName: string;
+  serverChannel: string;
+  category: string;
+  costPrice: number;
+  sellingPrice: number;
+  quantity: number;
+  isPhysical: boolean;
+  stock: number;
+  outWalletId: string;
+  notes?: string;
+  product?: Product;
+}
+
+export interface CartCheckoutPayload {
+  items: CartItem[];
+  inWalletId: string;
+  paymentStatus: PaymentStatus;
+  paymentMethod: string;
+  customerTarget?: string; // Nama pembeli/pengutang
+  cashReceived?: number;
+  notes?: string;
+}
+
+/**
+ * Eksekusi checkout keranjang belanja (mendukung banyak item sekaligus)
+ * Berjalan secara ATOMIK dalam satu db.transaction
+ */
+export async function executeCartTransaction(
+  payload: CartCheckoutPayload
+): Promise<Transaction[]> {
+  if (!payload.items || payload.items.length === 0) {
+    throw new Error('Keranjang belanja masih kosong.');
+  }
+
+  const createdTransactions: Transaction[] = [];
+  const batchId = `ORD-${Date.now().toString(36).toUpperCase()}`;
+
+  await db.transaction('rw', [db.wallets, db.products, db.transactions, db.customers], async () => {
+    const costPerWallet: Record<string, number> = {};
+    let totalSellingAll = 0;
+
+    for (const item of payload.items) {
+      const qty = item.quantity && item.quantity > 0 ? item.quantity : 1;
+      const totalCost = item.costPrice * qty;
+      const totalSelling = item.sellingPrice * qty;
+      const profit = totalSelling - totalCost;
+      totalSellingAll += totalSelling;
+
+      const outWallet = item.outWalletId || 'cash_main';
+      costPerWallet[outWallet] = (costPerWallet[outWallet] || 0) + totalCost;
+
+      // Kurangi stok barang fisik jika ada
+      if (item.productId && item.productId > 0 && item.isPhysical) {
+        const prod = await db.products.get(item.productId);
+        if (prod && (prod.isPhysical || prod.trackStock)) {
+          const newStock = Math.max(0, prod.stock - qty);
+          await db.products.update(item.productId, { stock: newStock });
+        }
+      }
+
+      const txnId = `TRX-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const record: Transaction = {
+        id: txnId,
+        date: new Date().toISOString(),
+        productId: item.productId || 0,
+        productName: item.productName,
+        customerId: null,
+        customerTarget: payload.customerTarget?.trim() || undefined,
+        costPrice: totalCost,
+        sellingPrice: totalSelling,
+        profit,
+        outWalletId: outWallet,
+        inWalletId: payload.inWalletId,
+        paymentStatus: payload.paymentStatus,
+        paymentMethod: payload.paymentMethod,
+        notes: payload.notes?.trim()
+          ? `${payload.notes} (${batchId})`
+          : payload.items.length > 1
+          ? `Pesanan ${batchId}`
+          : undefined,
+        quantity: qty,
+      };
+
+      await db.transactions.add(record);
+      createdTransactions.push(record);
+    }
+
+    // 1. Potong saldo modal dari masing-masing outWallet
+    for (const [walletId, totalCost] of Object.entries(costPerWallet)) {
+      const wallet = await db.wallets.get(walletId);
+      if (wallet) {
+        await db.wallets.update(walletId, {
+          currentBalance: wallet.currentBalance - totalCost,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    // 2. Tambah saldo penerima (inWalletId) jika status lunas (PAID)
+    if (payload.paymentStatus === 'PAID') {
+      const inWallet = await db.wallets.get(payload.inWalletId);
+      if (inWallet) {
+        await db.wallets.update(payload.inWalletId, {
+          currentBalance: inWallet.currentBalance + totalSellingAll,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    }
+  });
+
+  return createdTransactions;
 }

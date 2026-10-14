@@ -16,6 +16,8 @@ import {
   TrendingUp,
   Boxes,
   ChevronDown,
+  Wallet as WalletIcon,
+  Box,
 } from 'lucide-react';
 import { db, type Product } from '../db/db';
 import { formatRupiah } from '../utils/formatters';
@@ -35,21 +37,29 @@ const COMMON_CATEGORIES = [
   'Tagihan / PPOB',
 ];
 
-const COMMON_SERVERS = [
-  'Digipos Aja!',
-  'WeKios',
-  'Server PLN',
-  'Toko Fisik',
-  'Mitra Bukalapak',
-  'BSI / Bank',
-  'DANA Bisnis',
-];
-
 export const ProductManagement: React.FC<ProductManagementProps> = ({
   onBackToCashier,
 }) => {
   const products = useLiveQuery(() => db.products.toArray(), []) || [];
   const wallets = useLiveQuery(() => db.wallets.toArray(), []) || [];
+
+  // Dompet kas tunai untuk barang fisik
+  const cashWallet = useMemo(() => {
+    return (
+      wallets.find((w) => w.category === 'CASH') ||
+      wallets.find((w) => w.id.toLowerCase().includes('cash')) ||
+      wallets[0]
+    );
+  }, [wallets]);
+
+  // Dompet server eksekutor untuk produk digital (hanya dari tabel wallets, non-tunai)
+  const serverWallets = useMemo(() => {
+    const servers = wallets.filter((w) => w.category === 'SERVER');
+    if (servers.length > 0) return servers;
+    const nonCash = wallets.filter((w) => w.category !== 'CASH');
+    if (nonCash.length > 0) return nonCash;
+    return wallets;
+  }, [wallets]);
 
   // Filter & Search States
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,28 +78,35 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
 
   // Form Fields for Full Modal
   const [formName, setFormName] = useState('');
-  const [formServer, setFormServer] = useState('Digipos Aja!');
-  const [customServer, setCustomServer] = useState('');
+  const [formSelectedWalletId, setFormSelectedWalletId] = useState<string>('');
   const [formCategory, setFormCategory] = useState('Pulsa Reguler');
   const [customCategory, setCustomCategory] = useState('');
   const [formCostPrice, setFormCostPrice] = useState<number>(0);
   const [formSellingPrice, setFormSellingPrice] = useState<number>(0);
-  const [formDefaultWalletId, setFormDefaultWalletId] = useState('server_digipos');
   const [formIsPhysical, setFormIsPhysical] = useState(false);
   const [formStock, setFormStock] = useState<number>(10);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Unique server list from db + common
+  // Unique server list for filtering (hanya dari server riil yang ada produknya atau dompet aktif)
   const serverOptions = useMemo(() => {
-    const list = new Set([
-      ...COMMON_SERVERS,
-      ...products.map((p) => p.serverChannel || p.category).filter(Boolean),
-    ]);
+    const list = new Set<string>();
+    products.forEach((p) => {
+      if (p.serverChannel && p.serverChannel.trim()) {
+        list.add(p.serverChannel.trim());
+      }
+    });
+    wallets.forEach((w) => {
+      if (w.category === 'SERVER') {
+        const cleanName = w.name.replace(/^Saldo\s+/i, '').trim();
+        if (cleanName) list.add(cleanName);
+      }
+    });
+    list.add('Toko Fisik');
     return Array.from(list);
-  }, [products]);
+  }, [products, wallets]);
 
-  // Unique category list from db + common
+  // Unique category list from db + default
   const categoryOptions = useMemo(() => {
     const list = new Set([
       ...COMMON_CATEGORIES,
@@ -98,7 +115,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
     return Array.from(list);
   }, [products]);
 
-  // Summary Metrics
+  // Ringkasan Metrik
   const summaryMetrics = useMemo(() => {
     const totalVariants = products.length;
     let totalStockAssetValue = 0;
@@ -149,17 +166,23 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
     });
   }, [products, selectedServer, selectedCategory, searchQuery]);
 
+  // Dompet server yang sedang dipilih di form modal
+  const formCurrentServerWallet = useMemo(() => {
+    return (
+      wallets.find((w) => w.id === formSelectedWalletId) ||
+      serverWallets[0]
+    );
+  }, [wallets, formSelectedWalletId, serverWallets]);
+
   // Handlers for Full Modal
   const openCreateModal = () => {
     setEditingProduct(null);
     setFormName('');
-    setFormServer('Digipos Aja!');
-    setCustomServer('');
+    setFormSelectedWalletId(serverWallets[0]?.id || '');
     setFormCategory('Pulsa Reguler');
     setCustomCategory('');
     setFormCostPrice(0);
     setFormSellingPrice(0);
-    setFormDefaultWalletId('server_digipos');
     setFormIsPhysical(false);
     setFormStock(10);
     setFormError(null);
@@ -170,15 +193,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
     setEditingProduct(p);
     setFormName(p.name);
 
-    const sChannel = p.serverChannel || p.category || 'Digipos Aja!';
-    if (serverOptions.includes(sChannel)) {
-      setFormServer(sChannel);
-      setCustomServer('');
-    } else {
-      setFormServer('CUSTOM');
-      setCustomServer(sChannel);
-    }
-
+    // Kategori
     const cat = p.category || 'Pulsa Reguler';
     if (categoryOptions.includes(cat)) {
       setFormCategory(cat);
@@ -190,38 +205,23 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
 
     setFormCostPrice(p.costPrice);
     setFormSellingPrice(p.sellingPrice);
-    setFormDefaultWalletId(p.defaultWalletId || 'cash_main');
-    const isPhys = p.isPhysical ?? p.trackStock ?? (p.stock > 0);
+    const isPhys = Boolean(p.isPhysical ?? p.trackStock);
     setFormIsPhysical(isPhys);
     setFormStock(p.stock || 0);
+
+    // Cari wallet yang sesuai
+    const matched =
+      wallets.find((w) => w.id === p.defaultWalletId) ||
+      wallets.find((w) => {
+        const wClean = w.name.replace(/^Saldo\s+/i, '').toLowerCase();
+        const sClean = (p.serverChannel || '').toLowerCase();
+        return wClean === sClean || wClean.includes(sClean) || sClean.includes(wClean);
+      }) ||
+      serverWallets[0];
+
+    setFormSelectedWalletId(matched?.id || serverWallets[0]?.id || '');
     setFormError(null);
     setIsFullModalOpen(true);
-  };
-
-  // Auto-matching default wallet when server changes
-  const handleServerSelectionChange = (val: string) => {
-    setFormServer(val);
-    const lower = val.toLowerCase();
-    const matched = wallets.find((w) => {
-      const idLower = w.id.toLowerCase();
-      const nameLower = w.name.toLowerCase();
-      if (lower.includes('digipos') && (idLower.includes('digipos') || nameLower.includes('digipos'))) return true;
-      if (lower.includes('wekios') && (idLower.includes('wekios') || nameLower.includes('wekios'))) return true;
-      if (lower.includes('pln') && (idLower.includes('pln') || nameLower.includes('pln'))) return true;
-      if (lower.includes('fisik') || lower.includes('toko')) {
-        return w.category === 'CASH' || idLower.includes('cash');
-      }
-      return nameLower.includes(lower);
-    });
-
-    if (matched) {
-      setFormDefaultWalletId(matched.id);
-    }
-
-    // Auto toggle physical if Toko Fisik is picked
-    if (lower.includes('fisik') || lower.includes('perdana') || lower.includes('voucher') || lower.includes('aksesoris')) {
-      setFormIsPhysical(true);
-    }
   };
 
   const handleSaveFullProduct = async (e: React.FormEvent) => {
@@ -237,23 +237,46 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
       return;
     }
 
-    const finalServer =
-      formServer === 'CUSTOM' ? customServer.trim() || 'Server Eksternal' : formServer;
     const finalCategory =
-      formCategory === 'CUSTOM' ? customCategory.trim() || 'Umum' : formCategory;
+      formCategory === 'CUSTOM' ? customCategory.trim() : formCategory;
+    if (!finalCategory) {
+      setFormError('Pilih atau ketik kategori produk.');
+      return;
+    }
+
+    let finalServerChannel = 'Toko Fisik';
+    let finalDefaultWalletId = cashWallet?.id || 'cash_main';
+    let finalStock = 0;
+
+    if (formIsPhysical) {
+      finalServerChannel = 'Toko Fisik';
+      finalDefaultWalletId = cashWallet?.id || 'cash_main';
+      finalStock = Math.max(0, Number(formStock) || 0);
+    } else {
+      const chosenWallet =
+        wallets.find((w) => w.id === formSelectedWalletId) || serverWallets[0];
+      if (!chosenWallet) {
+        setFormError('Pilih server / dompet eksekutor.');
+        return;
+      }
+      finalServerChannel =
+        chosenWallet.name.replace(/^Saldo\s+/i, '').trim() || chosenWallet.name;
+      finalDefaultWalletId = chosenWallet.id;
+      finalStock = 0;
+    }
 
     setIsSubmitting(true);
     try {
       const payload: Omit<Product, 'id'> = {
         name: formName.trim(),
-        serverChannel: finalServer,
+        serverChannel: finalServerChannel,
         category: finalCategory,
         costPrice: Number(formCostPrice) || 0,
         sellingPrice: Number(formSellingPrice) || 0,
         isPhysical: formIsPhysical,
         trackStock: formIsPhysical,
-        stock: formIsPhysical ? Number(formStock) || 0 : 0,
-        defaultWalletId: formDefaultWalletId || undefined,
+        stock: finalStock,
+        defaultWalletId: finalDefaultWalletId,
       };
 
       if (editingProduct?.id) {
@@ -752,38 +775,107 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                 />
               </div>
 
-              {/* 2. Server / Aplikasi Eksekutor */}
-              <div>
-                <label className="block text-slate-700 font-bold mb-1.5 text-xs">
-                  Server / Aplikasi Eksekutor <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  value={formServer}
-                  onChange={(e) => handleServerSelectionChange(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-semibold text-xs cursor-pointer focus:border-slate-900"
-                >
-                  {serverOptions.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                  <option value="CUSTOM">+ Ketik Server / Channel Baru...</option>
-                </select>
+              {/* 2. Switch: Barang Fisik (Memiliki Stok) */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-900 block flex items-center gap-1.5">
+                      <Box className="w-3.5 h-3.5 text-slate-600" />
+                      Barang Fisik (Memiliki Stok)
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      {formIsPhysical
+                        ? 'Barang fisik konter (stok dihitung, modal potong Kas Tunai)'
+                        : 'Produk digital/server (pulsa, data, token tanpa stok fisik)'}
+                    </span>
+                  </div>
 
-                {formServer === 'CUSTOM' && (
-                  <input
-                    type="text"
-                    required
-                    autoFocus
-                    placeholder="Contoh: Mitra Tokopedia, BSI Smart, Kiosbank"
-                    value={customServer}
-                    onChange={(e) => setCustomServer(e.target.value)}
-                    className="w-full mt-2 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-medium text-xs focus:bg-white focus:border-slate-900"
-                  />
+                  {/* Toggle Switch */}
+                  <button
+                    type="button"
+                    onClick={() => setFormIsPhysical(!formIsPhysical)}
+                    className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+                      formIsPhysical ? 'bg-slate-900' : 'bg-slate-300'
+                    }`}
+                  >
+                    <div
+                      className={`w-5 h-5 rounded-full bg-white shadow-md absolute top-0.5 transition-transform ${
+                        formIsPhysical ? 'left-6.5' : 'left-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Jika Barang Fisik: Input Stok & Info Modal Kas */}
+                {formIsPhysical && (
+                  <div className="pt-3 border-t border-slate-200 space-y-3">
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1 text-[11px]">
+                        Jumlah Stok Fisik (Unit) <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        value={formStock}
+                        onChange={(e) => setFormStock(Number(e.target.value))}
+                        className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 font-bold text-xs focus:border-slate-900 focus:outline-none"
+                        placeholder="Contoh: 10"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between px-3 py-2 bg-white border border-slate-200 rounded-xl text-[11px]">
+                      <span className="text-slate-500 font-medium flex items-center gap-1.5">
+                        <WalletIcon className="w-3.5 h-3.5 text-slate-500" />
+                        Sumber Modal (Terkunci):
+                      </span>
+                      <span className="font-bold text-slate-900">
+                        {cashWallet?.name || 'Kas Tunai'} ({formatRupiah(cashWallet?.currentBalance || 0)})
+                      </span>
+                    </div>
+                  </div>
                 )}
               </div>
 
-              {/* 3. Kategori Produk */}
+              {/* 3. Server / Aplikasi Eksekutor (HANYA MUNCUL JIKA PRODUK DIGITAL) */}
+              {!formIsPhysical && (
+                <div>
+                  <label className="block text-slate-700 font-bold mb-1.5 text-xs">
+                    Server / Aplikasi Eksekutor <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={formSelectedWalletId}
+                    onChange={(e) => setFormSelectedWalletId(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-semibold text-xs cursor-pointer focus:border-slate-900 focus:outline-none"
+                  >
+                    {serverWallets.map((w) => {
+                      const cleanName = w.name.replace(/^Saldo\s+/i, '').trim() || w.name;
+                      return (
+                        <option key={w.id} value={w.id}>
+                          {cleanName} — Saldo: {formatRupiah(w.currentBalance)}
+                        </option>
+                      );
+                    })}
+                  </select>
+
+                  {/* Redundansi Dihilangkan: Sumber Modal Langsung Terkunci Otomatis */}
+                  <div className="mt-2 flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px]">
+                    <span className="text-slate-500 font-medium flex items-center gap-1.5">
+                      <WalletIcon className="w-3.5 h-3.5 text-slate-500" />
+                      Sumber Modal Terkunci:
+                    </span>
+                    <span className="font-bold text-slate-900">
+                      {formCurrentServerWallet?.name} ({formatRupiah(formCurrentServerWallet?.currentBalance || 0)})
+                    </span>
+                  </div>
+
+                  <p className="mt-1.5 text-[11px] text-slate-400">
+                    Server terhubung langsung ke kantong saldo modal. Ingin menambah server baru? Buat di menu <strong>Dompet Modal</strong>.
+                  </p>
+                </div>
+              )}
+
+              {/* 4. Jenis Kategori Produk (Dinamis + Opsi Tambah Kategori Baru) */}
               <div>
                 <label className="block text-slate-700 font-bold mb-1.5 text-xs">
                   Jenis Kategori Produk <span className="text-rose-500">*</span>
@@ -791,7 +883,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                 <select
                   value={formCategory}
                   onChange={(e) => setFormCategory(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-semibold text-xs cursor-pointer focus:border-slate-900"
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-semibold text-xs cursor-pointer focus:border-slate-900 focus:outline-none"
                 >
                   {categoryOptions.map((opt) => (
                     <option key={opt} value={opt}>
@@ -806,81 +898,11 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                     type="text"
                     required
                     autoFocus
-                    placeholder="Contoh: Paket Roaming, Voucher Wifi, Game Topup"
+                    placeholder="Ketik nama kategori baru (contoh: Voucher Wifi, Roaming)..."
                     value={customCategory}
                     onChange={(e) => setCustomCategory(e.target.value)}
-                    className="w-full mt-2 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-medium text-xs focus:bg-white focus:border-slate-900"
+                    className="w-full mt-2 bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 font-semibold text-xs focus:bg-white focus:border-slate-900 focus:outline-none"
                   />
-                )}
-              </div>
-
-              {/* 4. Kantong Modal Default */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-slate-700 font-bold text-xs">
-                    Kantong Modal Terpotong:
-                  </label>
-                  <span className="text-[10px] text-slate-400 font-medium">
-                    Otomatis terkunci saat transaksi kasir
-                  </span>
-                </div>
-                <select
-                  value={formDefaultWalletId}
-                  onChange={(e) => setFormDefaultWalletId(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-slate-900 font-semibold text-xs cursor-pointer focus:border-slate-900"
-                >
-                  {wallets.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name} ({formatRupiah(w.currentBalance)})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 5. Switch: Barang Fisik (Memiliki Stok) */}
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold text-slate-900 block">
-                      Barang Fisik (Memiliki Stok)
-                    </span>
-                    <span className="text-[11px] text-slate-500">
-                      {formIsPhysical
-                        ? 'Stok berkurang otomatis saat kasir memproses pesanan'
-                        : 'Produk digital/server (tanpa batas stok fisik)'}
-                    </span>
-                  </div>
-
-                  {/* Toggle Switch */}
-                  <button
-                    type="button"
-                    onClick={() => setFormIsPhysical(!formIsPhysical)}
-                    className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                      formIsPhysical ? 'bg-slate-900' : 'bg-slate-300'
-                    }`}
-                  >
-                    <div
-                      className={`w-5 h-5 rounded-full bg-white shadow-md absolute top-0.5 transition-transform ${
-                        formIsPhysical ? 'left-6.5' : 'left-0.5'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {formIsPhysical && (
-                  <div className="pt-2 border-t border-slate-200">
-                    <label className="block text-slate-700 font-bold mb-1 text-[11px]">
-                      Jumlah Stok Tersedia:
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      required
-                      value={formStock}
-                      onChange={(e) => setFormStock(Number(e.target.value))}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold text-xs focus:border-slate-900"
-                    />
-                  </div>
                 )}
               </div>
 

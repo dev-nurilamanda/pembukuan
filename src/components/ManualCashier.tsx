@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
-import { ArrowRight, RotateCcw } from 'lucide-react';
+import { ArrowRight, RotateCcw, ShoppingBag, Plus } from 'lucide-react';
 import { formatRupiah } from '../utils/formatters';
 
 interface ManualCashierProps {
-  onProceedManual: (item: {
+  onAddToCart: (item: {
+    name: string;
+    costPrice: number;
+    sellingPrice: number;
+    category: string;
+  }) => void;
+  onProceedDirect: (item: {
     name: string;
     costPrice: number;
     sellingPrice: number;
@@ -11,11 +17,15 @@ interface ManualCashierProps {
   }) => void;
 }
 
-export const ManualCashier: React.FC<ManualCashierProps> = ({ onProceedManual }) => {
-  const [name, setName] = useState('Transaksi Manual');
+export const ManualCashier: React.FC<ManualCashierProps> = ({
+  onAddToCart,
+  onProceedDirect,
+}) => {
+  const [name, setName] = useState('Transaksi Bebas');
   const [sellingPrice, setSellingPrice] = useState<number>(0);
   const [costPrice, setCostPrice] = useState<number>(0);
   const [category] = useState<string>('Transaksi Bebas');
+  const [addedFeedback, setAddedFeedback] = useState(false);
 
   const addSelling = (amount: number) => {
     setSellingPrice((prev) => prev + amount);
@@ -27,13 +37,32 @@ export const ManualCashier: React.FC<ManualCashierProps> = ({ onProceedManual })
     setCostPrice(cost);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleAddToCart = () => {
+    if (sellingPrice <= 0) {
+      alert('Masukkan harga jual terlebih dahulu.');
+      return;
+    }
+    onAddToCart({
+      name: name.trim() || 'Transaksi Bebas',
+      costPrice: Number(costPrice) || 0,
+      sellingPrice: Number(sellingPrice),
+      category,
+    });
+    setAddedFeedback(true);
+    setTimeout(() => setAddedFeedback(false), 2000);
+    // Reset form for next item
+    setName('Transaksi Bebas');
+    setSellingPrice(0);
+    setCostPrice(0);
+  };
+
+  const handlePayNow = (e: React.FormEvent) => {
     e.preventDefault();
     if (sellingPrice <= 0) {
       alert('Masukkan harga jual terlebih dahulu.');
       return;
     }
-    onProceedManual({
+    onProceedDirect({
       name: name.trim() || 'Transaksi Bebas',
       costPrice: Number(costPrice) || 0,
       sellingPrice: Number(sellingPrice),
@@ -64,8 +93,14 @@ export const ManualCashier: React.FC<ManualCashierProps> = ({ onProceedManual })
         ))}
       </div>
 
-      {/* Form Tanpa Outer Card - Langsung Menempel Bersih di Latar Belakang */}
-      <form onSubmit={handleSubmit} className="space-y-5">
+      {addedFeedback && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-bold text-center animate-in fade-in duration-100">
+          ✓ Item manual berhasil ditambahkan ke keranjang!
+        </div>
+      )}
+
+      {/* Form Tanpa Outer Card */}
+      <form onSubmit={handlePayNow} className="space-y-5">
         {/* 1. Nama Transaksi */}
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
@@ -81,7 +116,7 @@ export const ManualCashier: React.FC<ManualCashierProps> = ({ onProceedManual })
           />
         </div>
 
-        {/* 2. Harga Jual Konsumen (Kalkulator POS Style) */}
+        {/* 2. Harga Jual Konsumen */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
@@ -114,7 +149,7 @@ export const ManualCashier: React.FC<ManualCashierProps> = ({ onProceedManual })
             />
           </div>
 
-          {/* Tombol Cepat Tambah Nominal (Tinggi h-11, Background Abu Netral, Ramah Jempol) */}
+          {/* Tombol Cepat Tambah Nominal */}
           <div className="grid grid-cols-4 gap-2 mt-2.5">
             {[5000, 10000, 20000, 50000].map((amt) => (
               <button
@@ -132,7 +167,7 @@ export const ManualCashier: React.FC<ManualCashierProps> = ({ onProceedManual })
         {/* 3. Harga Modal Terpotong */}
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
-            Harga Modal (Terpotong dari Dompet)
+            Harga Modal (Terpotong dari Dompet Tunai)
           </label>
           <div className="relative">
             <span className="absolute left-4 top-3.5 text-slate-400 font-black text-xl pointer-events-none">
@@ -157,15 +192,25 @@ export const ManualCashier: React.FC<ManualCashierProps> = ({ onProceedManual })
           </span>
         </div>
 
-        {/* Tombol Utama "Pilih Pembayaran" Mantap & Kokoh */}
-        <div className="pt-2">
+        {/* Tombol Aksi Kasir: "+ Masukkan ke Keranjang" & "Bayar Langsung" */}
+        <div className="pt-2 grid grid-cols-2 gap-2.5">
+          <button
+            type="button"
+            disabled={sellingPrice <= 0}
+            onClick={handleAddToCart}
+            className="h-14 bg-white border-2 border-slate-900 active:bg-slate-100 disabled:opacity-40 text-slate-900 font-bold rounded-2xl shadow-xs text-sm flex items-center justify-center gap-1.5 transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>+ Ke Keranjang</span>
+          </button>
+
           <button
             type="submit"
             disabled={sellingPrice <= 0}
-            className="w-full h-14 bg-slate-900 hover:bg-black active:scale-[0.98] disabled:opacity-40 text-white font-bold rounded-2xl shadow-md text-base flex items-center justify-center gap-2 transition cursor-pointer"
+            className="h-14 bg-slate-900 hover:bg-black active:scale-[0.98] disabled:opacity-40 text-white font-bold rounded-2xl shadow-md text-sm flex items-center justify-center gap-2 transition cursor-pointer"
           >
-            <span>Pilih Pembayaran • {formatRupiah(sellingPrice)}</span>
-            <ArrowRight className="w-5 h-5 stroke-[2.5]" />
+            <span>Bayar Langsung</span>
+            <ArrowRight className="w-4 h-4 stroke-[2.5]" />
           </button>
         </div>
       </form>

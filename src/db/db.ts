@@ -52,6 +52,7 @@ export interface Transaction {
   paymentStatus: PaymentStatus;
   paymentMethod: string; // 'CASH' | 'TRANSFER' | 'QRIS' | 'HUTANG' dll
   notes?: string;
+  quantity?: number; // Jumlah kuantitas barang fisik yang dibeli
 }
 
 export interface WalletTransfer {
