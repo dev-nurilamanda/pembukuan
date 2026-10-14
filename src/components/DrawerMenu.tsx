@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   X,
   ShoppingCart,
@@ -8,8 +8,11 @@ import {
   Upload,
   RefreshCw,
   ShieldCheck,
+  Smartphone,
+  Share,
 } from 'lucide-react';
 import { db, seedDefaultWallets, seedDefaultProducts } from '../db/db';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 interface DrawerMenuProps {
   isOpen: boolean;
@@ -24,7 +27,19 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
   activeView,
   onSelectView,
 }) => {
+  const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
+  const [showIOSModal, setShowIOSModal] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleInstallClick = async () => {
+    if (isInstallable) {
+      await install();
+      onClose();
+    } else if (isIOS) {
+      setShowIOSModal(true);
+    }
+  };
 
   const handleExportBackup = async () => {
     try {
@@ -158,7 +173,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
             </div>
             <div>
               <h3 className="font-extrabold text-sm leading-tight text-slate-900">Kasir Mandiri</h3>
-              <p className="text-[11px] text-slate-500 font-medium">Offline-First POS</p>
+              <p className="text-[11px] text-slate-500 font-medium">100% Offline-First PWA</p>
             </div>
           </div>
           <button
@@ -171,6 +186,25 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
 
         {/* Navigation Items */}
         <div className="p-3 space-y-1 flex-1 overflow-y-auto text-xs font-semibold">
+          {/* PWA Install Button if not already standalone */}
+          {!isInstalled && (isInstallable || isIOS) && (
+            <div className="mb-2 p-2.5 bg-slate-100 border border-slate-300 rounded-xl space-y-2">
+              <div className="flex items-center gap-2 text-slate-900 font-bold">
+                <Smartphone className="w-4 h-4 text-slate-900" />
+                <span>Pasang Aplikasi di HP</span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-normal leading-tight">
+                Akses instan dari layar utama HP tanpa kuota.
+              </p>
+              <button
+                onClick={handleInstallClick}
+                className="w-full py-2 bg-slate-900 hover:bg-black active:scale-95 text-white font-bold rounded-lg text-xs shadow-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <span>Install Kasir Mandiri</span>
+              </button>
+            </div>
+          )}
+
           <button
             onClick={() => {
               onSelectView('cashier');
@@ -250,9 +284,37 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
         {/* Footer info */}
         <div className="p-3 border-t border-slate-100 bg-slate-50 text-[11px] text-slate-500 flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>Dexie IndexedDB • Offline</span>
+          <span>Dexie IndexedDB • PWA Siap Install</span>
         </div>
       </div>
+
+      {/* iOS Safari Guide Modal */}
+      {showIOSModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="w-full max-w-sm bg-white rounded-2xl p-5 shadow-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-sm text-slate-900">Pasang di iPhone / iPad</h4>
+              <button
+                onClick={() => setShowIOSModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              1. Buka di browser Safari.<br />
+              2. Tekan tombol <strong className="text-slate-900">Bagikan (Share)</strong> <Share className="w-3.5 h-3.5 inline mx-0.5 text-blue-600" /> di bar bawah.<br />
+              3. Gulir ke bawah dan pilih <strong className="text-slate-900">Tambahkan ke Layar Utama (Add to Home Screen)</strong>.
+            </p>
+            <button
+              onClick={() => setShowIOSModal(false)}
+              className="w-full py-2 bg-slate-900 text-white rounded-xl text-xs font-bold"
+            >
+              Mengerti
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
