@@ -163,42 +163,42 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
         onClick={onClose}
       />
 
-      {/* Drawer Content */}
-      <div className="relative w-72 max-w-[85vw] bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-150">
-        {/* Drawer Header (Monokrom Bersih) */}
-        <div className="p-4 border-b border-slate-200 bg-white flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center font-black text-white text-xs">
+      {/* Drawer Content: Lebar 80-85% Layar HP (w-[84vw] max-w-sm) */}
+      <div className="relative w-[84vw] max-w-sm bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
+        {/* Drawer Header (Lega & Nyaman) */}
+        <div className="p-5 border-b border-slate-200 bg-white flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center font-black text-white text-sm shadow-2xs">
               KM
             </div>
             <div>
-              <h3 className="font-extrabold text-sm leading-tight text-slate-900">Kasir Mandiri</h3>
-              <p className="text-[11px] text-slate-500 font-medium">100% Offline-First PWA</p>
+              <h3 className="font-extrabold text-base leading-tight text-slate-900">Kasir Mandiri</h3>
+              <p className="text-xs text-slate-500 font-medium">100% Offline-First POS</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-800 active:bg-slate-100 rounded-lg transition"
+            className="p-2 text-slate-400 hover:text-slate-800 active:bg-slate-100 rounded-xl transition cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Navigation Items */}
-        <div className="p-3 space-y-1 flex-1 overflow-y-auto text-xs font-semibold">
+        {/* Navigation Items (Baris py-4 yang Santai & Luas) */}
+        <div className="p-4 space-y-1.5 flex-1 overflow-y-auto text-sm font-semibold">
           {/* PWA Install Button if not already standalone */}
           {!isInstalled && (isInstallable || isIOS) && (
-            <div className="mb-2 p-2.5 bg-slate-100 border border-slate-300 rounded-xl space-y-2">
-              <div className="flex items-center gap-2 text-slate-900 font-bold">
+            <div className="mb-3 p-3.5 bg-slate-100 border border-slate-300 rounded-2xl space-y-2.5">
+              <div className="flex items-center gap-2.5 text-slate-900 font-bold">
                 <Smartphone className="w-4 h-4 text-slate-900" />
                 <span>Pasang Aplikasi di HP</span>
               </div>
-              <p className="text-[11px] text-slate-500 font-normal leading-tight">
-                Akses instan dari layar utama HP tanpa kuota.
+              <p className="text-xs text-slate-600 font-normal leading-relaxed">
+                Akses cepat dari layar utama HP tanpa buka browser & kuota.
               </p>
               <button
                 onClick={handleInstallClick}
-                className="w-full py-2 bg-slate-900 hover:bg-black active:scale-95 text-white font-bold rounded-lg text-xs shadow-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 bg-slate-900 hover:bg-black active:scale-95 text-white font-bold rounded-xl text-xs shadow-xs transition cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>Install Kasir Mandiri</span>
               </button>
@@ -210,14 +210,14 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
               onSelectView('cashier');
               onClose();
             }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition cursor-pointer ${
+            className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition cursor-pointer active:scale-98 ${
               activeView === 'cashier'
-                ? 'bg-slate-900 text-white'
-                : 'text-slate-700 hover:bg-slate-100 active:bg-slate-100'
+                ? 'bg-slate-900 text-white shadow-2xs'
+                : 'text-slate-800 hover:bg-slate-100 active:bg-slate-100'
             }`}
           >
-            <ShoppingCart className="w-4 h-4" />
-            <span>Kasir Utama</span>
+            <ShoppingCart className="w-5 h-5 shrink-0" />
+            <span className="text-sm font-bold">Kasir Utama</span>
           </button>
 
           <button
@@ -225,14 +225,14 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
               onSelectView('wallets');
               onClose();
             }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition cursor-pointer ${
+            className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition cursor-pointer active:scale-98 ${
               activeView === 'wallets'
-                ? 'bg-slate-900 text-white'
-                : 'text-slate-700 hover:bg-slate-100 active:bg-slate-100'
+                ? 'bg-slate-900 text-white shadow-2xs'
+                : 'text-slate-800 hover:bg-slate-100 active:bg-slate-100'
             }`}
           >
-            <Wallet className="w-4 h-4" />
-            <span>Dompet & Saldo Modal</span>
+            <Wallet className="w-5 h-5 shrink-0" />
+            <span className="text-sm font-bold">Dompet & Saldo Modal</span>
           </button>
 
           <button
@@ -240,51 +240,51 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
               onSelectView('debts');
               onClose();
             }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition cursor-pointer ${
+            className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition cursor-pointer active:scale-98 ${
               activeView === 'debts'
-                ? 'bg-slate-900 text-white'
-                : 'text-slate-700 hover:bg-slate-100 active:bg-slate-100'
+                ? 'bg-slate-900 text-white shadow-2xs'
+                : 'text-slate-800 hover:bg-slate-100 active:bg-slate-100'
             }`}
           >
-            <Clock className="w-4 h-4" />
-            <span>Riwayat & Piutang</span>
+            <Clock className="w-5 h-5 shrink-0" />
+            <span className="text-sm font-bold">Riwayat & Piutang</span>
           </button>
 
-          <div className="pt-3 pb-1 border-t border-slate-100">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3">
+          <div className="pt-4 pb-1 border-t border-slate-100">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider px-4">
               Backup & Penyimpanan
             </span>
           </div>
 
           <button
             onClick={handleExportBackup}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-100 transition cursor-pointer"
+            className="w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-slate-800 hover:bg-slate-100 active:bg-slate-100 transition cursor-pointer"
           >
-            <Download className="w-4 h-4 text-slate-600" />
-            <span>Ekspor Backup JSON</span>
+            <Download className="w-5 h-5 text-slate-600 shrink-0" />
+            <span className="text-sm font-medium">Ekspor Backup JSON</span>
           </button>
 
           <button
             onClick={handleImportBackup}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-100 active:bg-slate-100 transition cursor-pointer"
+            className="w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-slate-800 hover:bg-slate-100 active:bg-slate-100 transition cursor-pointer"
           >
-            <Upload className="w-4 h-4 text-slate-600" />
-            <span>Impor Pulihkan Backup</span>
+            <Upload className="w-5 h-5 text-slate-600 shrink-0" />
+            <span className="text-sm font-medium">Impor Pulihkan Backup</span>
           </button>
 
           <button
             onClick={handleResetData}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-rose-600 hover:bg-rose-50 active:bg-rose-50 transition cursor-pointer"
+            className="w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-rose-600 hover:bg-rose-50 active:bg-rose-50 transition cursor-pointer"
           >
-            <RefreshCw className="w-4 h-4 text-rose-500" />
-            <span>Reset ke Setelan Awal</span>
+            <RefreshCw className="w-5 h-5 text-rose-500 shrink-0" />
+            <span className="text-sm font-medium">Reset ke Setelan Awal</span>
           </button>
         </div>
 
         {/* Footer info */}
-        <div className="p-3 border-t border-slate-100 bg-slate-50 text-[11px] text-slate-500 flex items-center gap-2">
+        <div className="p-4 border-t border-slate-100 bg-slate-50 text-xs text-slate-500 flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>Dexie IndexedDB • PWA Siap Install</span>
+          <span>Dexie IndexedDB • 100% Offline-First</span>
         </div>
       </div>
 
