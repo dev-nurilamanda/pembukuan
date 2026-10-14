@@ -4,6 +4,7 @@ import {
   ShoppingCart,
   Wallet,
   Clock,
+  Package,
   Download,
   Upload,
   RefreshCw,
@@ -17,8 +18,8 @@ import { usePWAInstall } from '../hooks/usePWAInstall';
 interface DrawerMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  activeView: 'cashier' | 'wallets' | 'debts';
-  onSelectView: (view: 'cashier' | 'wallets' | 'debts') => void;
+  activeView: 'cashier' | 'wallets' | 'debts' | 'products';
+  onSelectView: (view: 'cashier' | 'wallets' | 'debts' | 'products') => void;
 }
 
 export const DrawerMenu: React.FC<DrawerMenuProps> = ({
@@ -218,6 +219,21 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
           >
             <ShoppingCart className="w-5 h-5 shrink-0" />
             <span className="text-sm font-bold">Kasir Utama</span>
+          </button>
+
+          <button
+            onClick={() => {
+              onSelectView('products');
+              onClose();
+            }}
+            className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition cursor-pointer active:scale-98 ${
+              activeView === 'products'
+                ? 'bg-slate-900 text-white shadow-2xs'
+                : 'text-slate-800 hover:bg-slate-100 active:bg-slate-100'
+            }`}
+          >
+            <Package className="w-5 h-5 shrink-0" />
+            <span className="text-sm font-bold">Manajemen Produk</span>
           </button>
 
           <button

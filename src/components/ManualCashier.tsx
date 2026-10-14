@@ -7,7 +7,7 @@ interface ManualCashierProps {
     name: string;
     costPrice: number;
     sellingPrice: number;
-    category: 'PHYSICAL' | 'DIGITAL';
+    category: string;
   }) => void;
 }
 
@@ -15,7 +15,7 @@ export const ManualCashier: React.FC<ManualCashierProps> = ({ onProceedManual })
   const [name, setName] = useState('Transaksi Manual');
   const [sellingPrice, setSellingPrice] = useState<number>(0);
   const [costPrice, setCostPrice] = useState<number>(0);
-  const [category] = useState<'DIGITAL' | 'PHYSICAL'>('DIGITAL');
+  const [category] = useState<string>('Transaksi Bebas');
 
   const addSelling = (amount: number) => {
     setSellingPrice((prev) => prev + amount);

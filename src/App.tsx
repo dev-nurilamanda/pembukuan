@@ -20,10 +20,11 @@ import { CheckoutBottomSheet } from './components/CheckoutBottomSheet';
 import { CreateProductModal } from './components/CreateProductModal';
 import { DrawerMenu } from './components/DrawerMenu';
 import { WalletList } from './components/WalletList';
+import { ProductManagement } from './components/ProductManagement';
 import { PWAInstallBanner } from './components/PWAInstallBanner';
 
 export default function App() {
-  const [activeView, setActiveView] = useState<'cashier' | 'wallets' | 'debts'>('cashier');
+  const [activeView, setActiveView] = useState<'cashier' | 'wallets' | 'debts' | 'products'>('cashier');
   const [subTab, setSubTab] = useState<'katalog' | 'manual' | 'pesanan'>('katalog');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSearchActive, setIsSearchActive] = useState(false);
@@ -35,7 +36,7 @@ export default function App() {
     name: string;
     costPrice: number;
     sellingPrice: number;
-    category: 'PHYSICAL' | 'DIGITAL';
+    category?: string;
   } | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
@@ -82,7 +83,7 @@ export default function App() {
     name: string;
     costPrice: number;
     sellingPrice: number;
-    category: 'PHYSICAL' | 'DIGITAL';
+    category?: string;
   }) => {
     setManualItem(item);
     setSelectedProduct(null);
@@ -103,7 +104,7 @@ export default function App() {
 
       {/* 1. HEADER ATAS (Putih Bersih Monokrom Menyatu dengan Layar HP) */}
       <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
-        <div className="max-w-md mx-auto px-4 py-3.5 flex items-center justify-between gap-3">
+        <div className={`w-full ${activeView === 'products' ? 'px-3' : 'max-w-md mx-auto px-4'} py-3.5 flex items-center justify-between gap-3`}>
           {/* Kiri: Hamburger Menu */}
           <div className="flex items-center gap-2.5">
             <button
@@ -118,6 +119,8 @@ export default function App() {
                 ? 'Kasir'
                 : activeView === 'wallets'
                 ? 'Dompet Modal'
+                : activeView === 'products'
+                ? 'Manajemen Produk'
                 : 'Riwayat & Piutang'}
             </h1>
           </div>
@@ -228,8 +231,8 @@ export default function App() {
         </div>
       )}
 
-      {/* 3. MAIN CONTENT CONTAINER (Edge-to-Edge on Mobile) */}
-      <main className="max-w-md mx-auto px-4 py-0 flex-1 w-full overflow-x-hidden">
+      {/* 3. MAIN CONTENT CONTAINER (Edge-to-Edge on Mobile & Products Full Width) */}
+      <main className={`flex-1 w-full overflow-x-hidden ${activeView === 'products' ? 'w-full min-h-screen px-3 py-1' : 'max-w-md mx-auto px-4 py-0'}`}>
         {activeView === 'cashier' ? (
           <>
             {subTab === 'katalog' && (
@@ -237,6 +240,7 @@ export default function App() {
                 searchQuery={searchQuery}
                 onSelectProduct={handleSelectProduct}
                 onOpenCreateModal={() => setIsCreateProductOpen(true)}
+                onOpenProductManagement={() => setActiveView('products')}
               />
             )}
 
@@ -252,6 +256,18 @@ export default function App() {
               </div>
             )}
           </>
+        ) : activeView === 'products' ? (
+          <div className="space-y-2 py-1.5 w-full">
+            <div className="flex items-center justify-end pb-0.5">
+              <button
+                onClick={() => setActiveView('cashier')}
+                className="text-xs font-bold text-slate-700 hover:text-slate-900 active:underline cursor-pointer"
+              >
+                &larr; Kembali ke Kasir
+              </button>
+            </div>
+            <ProductManagement onBackToCashier={() => setActiveView('cashier')} />
+          </div>
         ) : activeView === 'wallets' ? (
           <div className="space-y-3 py-3">
             <div className="flex items-center justify-between pb-1">

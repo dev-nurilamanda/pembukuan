@@ -13,7 +13,7 @@ interface CheckoutBottomSheetProps {
     name: string;
     costPrice: number;
     sellingPrice: number;
-    category: 'PHYSICAL' | 'DIGITAL';
+    category?: string;
   } | null;
   onSuccess: (txnId: string) => void;
 }
@@ -30,7 +30,7 @@ export const CheckoutBottomSheet: React.FC<CheckoutBottomSheetProps> = ({
   const itemTitle = product ? product.name : manualItem ? manualItem.name : '';
   const itemCost = product ? product.costPrice : manualItem ? manualItem.costPrice : 0;
   const itemSelling = product ? product.sellingPrice : manualItem ? manualItem.sellingPrice : 0;
-  const itemCategory = product ? product.category : manualItem ? manualItem.category : 'DIGITAL';
+  const itemCategory = product ? product.category : manualItem?.category || 'Transaksi Bebas';
 
   const [customerTarget, setCustomerTarget] = useState('');
   const [outWalletId, setOutWalletId] = useState('');
@@ -42,24 +42,46 @@ export const CheckoutBottomSheet: React.FC<CheckoutBottomSheetProps> = ({
 
   useEffect(() => {
     if (wallets.length > 0) {
-      const defaultOut = product?.defaultWalletId
-        ? wallets.find((w) => w.id === product.defaultWalletId)
-        : itemCategory === 'DIGITAL'
-        ? wallets.find((w) => w.category === 'SERVER') || wallets[0]
-        : wallets.find((w) => w.category === 'CASH') || wallets[0];
+      let matchedOut: Wallet | undefined;
 
-      if (defaultOut) {
-        setOutWalletId(defaultOut.id);
+      // 1. Check explicit product.defaultWalletId
+      if (product?.defaultWalletId) {
+        matchedOut = wallets.find((w) => w.id === product.defaultWalletId);
+      }
+
+      // 2. If not found, match by product category / server name
+      if (!matchedOut && product?.category) {
+        const catLower = product.category.toLowerCase();
+        matchedOut = wallets.find((w) => {
+          const nameLower = w.name.toLowerCase();
+          const idLower = w.id.toLowerCase();
+          if (catLower.includes('digipos') && (nameLower.includes('digipos') || idLower.includes('digipos'))) return true;
+          if (catLower.includes('pln') && (nameLower.includes('pln') || idLower.includes('pln'))) return true;
+          if (catLower.includes('mitra') && (nameLower.includes('mitra') || idLower.includes('mitra'))) return true;
+          if (catLower.includes('indosat') && (nameLower.includes('indosat') || nameLower.includes('rita'))) return true;
+          if (catLower.includes('fisik') && (w.category === 'CASH' || idLower.includes('cash'))) return true;
+          return nameLower.includes(catLower);
+        });
+      }
+
+      // 3. Fallback to server wallet or first wallet
+      if (!matchedOut) {
+        matchedOut = wallets.find((w) => w.category === 'SERVER') || wallets.find((w) => w.category === 'CASH') || wallets[0];
+      }
+
+      if (matchedOut) {
+        setOutWalletId(matchedOut.id);
       } else {
         setOutWalletId(wallets[0].id);
       }
 
+      // Default inWallet: Cash or QRIS
       const defaultIn = wallets.find((w) => w.category === 'CASH') || wallets[0];
       if (defaultIn) {
         setInWalletId(defaultIn.id);
       }
     }
-  }, [product, manualItem, wallets]);
+  }, [product, manualItem, wallets, itemCategory]);
 
   useEffect(() => {
     if (isOpen) {

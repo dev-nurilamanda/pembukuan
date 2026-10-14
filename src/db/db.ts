@@ -21,16 +21,17 @@ export interface Customer {
   createdAt?: string;
 }
 
-export type ProductCategory = 'PHYSICAL' | 'DIGITAL';
-
 export interface Product {
   id?: number; // autoincrement (++id)
   name: string;
-  category: ProductCategory;
+  serverChannel: string; // Nama Server / Aplikasi Eksekutor (misal: "Digipos Aja!", "WeKios", "Mitra Bukalapak", "Server PLN", "Toko Fisik")
+  category: string; // Jenis Kategori Produk (misal: "Pulsa Reguler", "Paket Data", "Token Listrik", "Kartu Perdana", "Voucher Fisik", "Aksesoris")
   costPrice: number;
   sellingPrice: number;
   stock: number;
-  defaultWalletId?: string;
+  isPhysical: boolean; // True jika barang fisik (kelola stok)
+  trackStock?: boolean; // alias kompatibilitas
+  defaultWalletId?: string; // id dompet modal yang otomatis terpotong
   sku?: string;
 }
 
@@ -75,13 +76,45 @@ export class KasirMandiriDatabase extends Dexie {
   constructor() {
     super('KasirMandiriDB');
 
-    // Define table schemas exactly according to specification
     this.version(1).stores({
       wallets: '&id, name, category, currentBalance, updatedAt',
       customers: '++id, name, phoneNumber, notes',
       products: '++id, name, category, costPrice, sellingPrice, stock, defaultWalletId',
       transactions: '&id, date, productId, productName, customerId, customerTarget, costPrice, sellingPrice, profit, outWalletId, inWalletId, paymentStatus, paymentMethod',
       walletTransfers: '++id, date, fromWalletId, toWalletId, amount, fee, notes',
+    });
+
+    this.version(2).stores({
+      products: '++id, name, serverChannel, category, costPrice, sellingPrice, stock, defaultWalletId, isPhysical',
+    }).upgrade(async tx => {
+      const productsTable = tx.table<Product, number>('products');
+      const all = await productsTable.toArray();
+      for (const p of all) {
+        const anyP = p as unknown as Record<string, unknown>;
+        if (!anyP.serverChannel) {
+          const oldCat = (p.category || '') as string;
+          let channel = 'Toko Fisik';
+          let cat = oldCat;
+          if (oldCat.includes('DigiPos') || oldCat.includes('Digipos')) {
+            channel = 'Digipos Aja!';
+            cat = p.name.includes('Data') ? 'Paket Data' : 'Pulsa Reguler';
+          } else if (oldCat.includes('WeKios')) {
+            channel = 'WeKios';
+            cat = p.name.includes('DANA') ? 'E-Wallet' : 'Paket Data';
+          } else if (oldCat.includes('PLN')) {
+            channel = 'Server PLN';
+            cat = 'Token Listrik';
+          } else if (oldCat.includes('Perdana')) {
+            channel = 'Toko Fisik';
+            cat = 'Kartu Perdana';
+          }
+          await productsTable.update(p.id!, {
+            serverChannel: channel,
+            category: cat || 'Umum',
+            isPhysical: p.isPhysical ?? p.trackStock ?? (p.stock > 0),
+          });
+        }
+      }
     });
   }
 }
@@ -97,9 +130,6 @@ export interface StorageStatus {
   percentUsed?: number;
 }
 
-/**
- * Meminta browser agar IndexedDB tidak dihapus otomatis oleh memory eviction
- */
 export async function requestPersistentStorage(): Promise<StorageStatus> {
   let isPersisted = false;
 
@@ -134,7 +164,7 @@ export async function requestPersistentStorage(): Promise<StorageStatus> {
   return { isPersisted, quotaBytes, usedBytes, percentUsed };
 }
 
-// --- INITIAL SEED HELPER ---
+// --- INITIAL SEED HELPER (Data Nyata Berbasis Channel & Server) ---
 
 export const DEFAULT_WALLETS: Wallet[] = [
   {
@@ -146,114 +176,237 @@ export const DEFAULT_WALLETS: Wallet[] = [
     notes: 'Uang fisik tunai kasir & uang kembalian',
   },
   {
+    id: 'server_digipos',
+    name: 'Saldo DigiPos Aja!',
+    category: 'SERVER',
+    currentBalance: 850000,
+    updatedAt: new Date().toISOString(),
+    notes: 'Modal pulsa, paket data & perdana Telkomsel',
+  },
+  {
+    id: 'server_wekios',
+    name: 'Saldo WeKios',
+    category: 'SERVER',
+    currentBalance: 950000,
+    updatedAt: new Date().toISOString(),
+    notes: 'Modal e-wallet, data all operator & multipayment',
+  },
+  {
+    id: 'server_pln',
+    name: 'Saldo Server PLN',
+    category: 'SERVER',
+    currentBalance: 1200000,
+    updatedAt: new Date().toISOString(),
+    notes: 'Modal token listrik PLN & tagihan',
+  },
+  {
     id: 'bank_main',
     name: 'Rekening Bank',
     category: 'BANK',
-    currentBalance: 2000000,
+    currentBalance: 2500000,
     updatedAt: new Date().toISOString(),
-    notes: 'Rekening operasional bank (BCA/BRI/Mandiri/dsb)',
-  },
-  {
-    id: 'server_pulsa',
-    name: 'Saldo Server Pulsa',
-    category: 'SERVER',
-    currentBalance: 1000000,
-    updatedAt: new Date().toISOString(),
-    notes: 'Deposit saldo modal transaksi pulsa, paket data, & token PLN',
+    notes: 'Rekening operasional bank',
   },
   {
     id: 'qris_ewallet',
-    name: 'E-Wallet / QRIS',
+    name: 'QRIS / E-Wallet',
     category: 'EWALLET',
-    currentBalance: 350000,
+    currentBalance: 400000,
     updatedAt: new Date().toISOString(),
-    notes: 'Tampungan pembayaran QRIS, Gopay, OVO, ShopeePay, DANA',
+    notes: 'Tampungan pembayaran QRIS masuk',
   },
 ];
 
 export const DEFAULT_PRODUCTS: Product[] = [
+  // DigiPos Aja! (Server Eksekutor)
   {
-    name: 'Token PLN 20.000',
-    category: 'DIGITAL',
-    costPrice: 20300,
-    sellingPrice: 23000,
-    stock: 999,
-    defaultWalletId: 'server_pulsa',
-  },
-  {
-    name: 'Token PLN 50.000',
-    category: 'DIGITAL',
-    costPrice: 50300,
-    sellingPrice: 53000,
-    stock: 999,
-    defaultWalletId: 'server_pulsa',
+    name: 'Telkomsel Data 14GB 30 Hari',
+    serverChannel: 'Digipos Aja!',
+    category: 'Paket Data',
+    costPrice: 42000,
+    sellingPrice: 47000,
+    stock: 0,
+    isPhysical: false,
+    trackStock: false,
+    defaultWalletId: 'server_digipos',
   },
   {
     name: 'Pulsa Telkomsel 10.000',
-    category: 'DIGITAL',
+    serverChannel: 'Digipos Aja!',
+    category: 'Pulsa Reguler',
     costPrice: 10250,
     sellingPrice: 12000,
-    stock: 999,
-    defaultWalletId: 'server_pulsa',
+    stock: 0,
+    isPhysical: false,
+    trackStock: false,
+    defaultWalletId: 'server_digipos',
   },
   {
     name: 'Pulsa Telkomsel 25.000',
-    category: 'DIGITAL',
+    serverChannel: 'Digipos Aja!',
+    category: 'Pulsa Reguler',
     costPrice: 25100,
     sellingPrice: 27000,
-    stock: 999,
-    defaultWalletId: 'server_pulsa',
+    stock: 0,
+    isPhysical: false,
+    trackStock: false,
+    defaultWalletId: 'server_digipos',
+  },
+
+  // WeKios
+  {
+    name: 'Topup Saldo DANA 50.000',
+    serverChannel: 'WeKios',
+    category: 'E-Wallet',
+    costPrice: 50500,
+    sellingPrice: 52500,
+    stock: 0,
+    isPhysical: false,
+    trackStock: false,
+    defaultWalletId: 'server_wekios',
   },
   {
     name: 'Paket Data Indosat 10GB',
-    category: 'DIGITAL',
+    serverChannel: 'WeKios',
+    category: 'Paket Data',
     costPrice: 34500,
     sellingPrice: 40000,
-    stock: 999,
-    defaultWalletId: 'server_pulsa',
+    stock: 0,
+    isPhysical: false,
+    trackStock: false,
+    defaultWalletId: 'server_wekios',
+  },
+
+  // Server PLN
+  {
+    name: 'Token PLN 20.000',
+    serverChannel: 'Server PLN',
+    category: 'Token Listrik',
+    costPrice: 20300,
+    sellingPrice: 23000,
+    stock: 0,
+    isPhysical: false,
+    trackStock: false,
+    defaultWalletId: 'server_pln',
   },
   {
-    name: 'Voucher Axis Aigo 2GB',
-    category: 'PHYSICAL',
-    costPrice: 11000,
-    sellingPrice: 13500,
-    stock: 14,
+    name: 'Token PLN 50.000',
+    serverChannel: 'Server PLN',
+    category: 'Token Listrik',
+    costPrice: 50300,
+    sellingPrice: 53000,
+    stock: 0,
+    isPhysical: false,
+    trackStock: false,
+    defaultWalletId: 'server_pln',
+  },
+
+  // Toko Fisik (Barang Fisik Memiliki Stok)
+  {
+    name: 'Perdana Telkomsel Lite 3GB',
+    serverChannel: 'Toko Fisik',
+    category: 'Kartu Perdana',
+    costPrice: 18000,
+    sellingPrice: 22000,
+    stock: 12,
+    isPhysical: true,
+    trackStock: true,
     defaultWalletId: 'cash_main',
   },
   {
-    name: 'Voucher Smartfren Unlimited',
-    category: 'PHYSICAL',
-    costPrice: 22000,
-    sellingPrice: 25000,
+    name: 'Perdana Telkomsel By.U 10GB',
+    serverChannel: 'Toko Fisik',
+    category: 'Kartu Perdana',
+    costPrice: 28000,
+    sellingPrice: 33000,
     stock: 8,
+    isPhysical: true,
+    trackStock: true,
     defaultWalletId: 'cash_main',
   },
   {
-    name: 'Air Mineral Botol 600ml',
-    category: 'PHYSICAL',
-    costPrice: 2500,
-    sellingPrice: 4000,
-    stock: 24,
+    name: 'Perdana Telkomsel Super Seru 25GB',
+    serverChannel: 'Toko Fisik',
+    category: 'Kartu Perdana',
+    costPrice: 45000,
+    sellingPrice: 52000,
+    stock: 5,
+    isPhysical: true,
+    trackStock: true,
+    defaultWalletId: 'cash_main',
+  },
+  {
+    name: 'Voucher Telkomsel 2.5GB 5 Hari',
+    serverChannel: 'Toko Fisik',
+    category: 'Voucher Fisik',
+    costPrice: 10000,
+    sellingPrice: 12500,
+    stock: 20,
+    isPhysical: true,
+    trackStock: true,
+    defaultWalletId: 'cash_main',
+  },
+  {
+    name: 'Kabel Data Type-C Fast Charging',
+    serverChannel: 'Toko Fisik',
+    category: 'Aksesoris',
+    costPrice: 12000,
+    sellingPrice: 25000,
+    stock: 15,
+    isPhysical: true,
+    trackStock: true,
     defaultWalletId: 'cash_main',
   },
 ];
 
 /**
- * Seed produk awal jika database produk masih kosong
+ * Seed produk awal berbasis channel eksekusi & kategori nyata
  */
 export async function seedDefaultProducts(): Promise<boolean> {
   return await db.transaction('rw', db.products, async () => {
-    const count = await db.products.count();
-    if (count === 0) {
+    const existing = await db.products.toArray();
+    if (existing.length === 0) {
       await db.products.bulkAdd(DEFAULT_PRODUCTS);
       return true;
     }
+
+    // Auto-update jika masih ada data yang belum memiliki serverChannel
+    const hasMissingServerChannel = existing.some((p) => !p.serverChannel);
+    if (hasMissingServerChannel) {
+      for (const p of existing) {
+        if (!p.serverChannel) {
+          const oldCat = p.category || '';
+          let channel = 'Toko Fisik';
+          let cat = oldCat;
+          if (oldCat.includes('DigiPos') || oldCat.includes('Digipos')) {
+            channel = 'Digipos Aja!';
+            cat = p.name.includes('Data') ? 'Paket Data' : 'Pulsa Reguler';
+          } else if (oldCat.includes('WeKios')) {
+            channel = 'WeKios';
+            cat = p.name.includes('DANA') ? 'E-Wallet' : 'Paket Data';
+          } else if (oldCat.includes('PLN')) {
+            channel = 'Server PLN';
+            cat = 'Token Listrik';
+          } else if (oldCat.includes('Perdana')) {
+            channel = 'Toko Fisik';
+            cat = 'Kartu Perdana';
+          }
+          await db.products.update(p.id!, {
+            serverChannel: channel,
+            category: cat || 'Umum',
+            isPhysical: p.isPhysical ?? p.trackStock ?? (p.stock > 0),
+          });
+        }
+      }
+      return true;
+    }
+
     return false;
   });
 }
 
 /**
- * Seed kantong saldo awal jika belum ada data sama sekali
+ * Seed kantong saldo modal bawaan
  */
 export async function seedDefaultWallets(): Promise<boolean> {
   return await db.transaction('rw', db.wallets, async () => {
@@ -262,7 +415,32 @@ export async function seedDefaultWallets(): Promise<boolean> {
       await db.wallets.bulkAdd(DEFAULT_WALLETS);
       return true;
     }
+
+    // Pastikan server_digipos dan server_wekios terdaftar
+    const hasDigipos = await db.wallets.get('server_digipos');
+    if (!hasDigipos) {
+      await db.wallets.put({
+        id: 'server_digipos',
+        name: 'Saldo DigiPos Aja!',
+        category: 'SERVER',
+        currentBalance: 850000,
+        updatedAt: new Date().toISOString(),
+        notes: 'Modal DigiPos Aja!',
+      });
+    }
+
+    const hasWekios = await db.wallets.get('server_wekios');
+    if (!hasWekios) {
+      await db.wallets.put({
+        id: 'server_wekios',
+        name: 'Saldo WeKios',
+        category: 'SERVER',
+        currentBalance: 950000,
+        updatedAt: new Date().toISOString(),
+        notes: 'Modal WeKios',
+      });
+    }
+
     return false;
   });
 }
-

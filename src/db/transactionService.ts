@@ -3,7 +3,7 @@ import { db, type Transaction, type Product, type PaymentStatus } from './db';
 export interface CreateTransactionPayload {
   productId?: number;
   productName: string;
-  category?: 'PHYSICAL' | 'DIGITAL';
+  category?: string;
   customerTarget?: string;
   customerId?: number | null;
   costPrice: number;
@@ -72,10 +72,10 @@ export async function executeCashierTransaction(
     }
     // Jika UNPAID: saldo inWalletId TIDAK bertambah
 
-    // 4. Jika produk fisik, kurangi stok barang
+    // 4. Jika produk mengelola stok fisik, kurangi stok barang
     if (payload.productId && payload.productId > 0) {
       const product = await db.products.get(payload.productId);
-      if (product && product.category === 'PHYSICAL') {
+      if (product && (product.isPhysical || product.trackStock)) {
         const newStock = Math.max(0, product.stock - qty);
         await db.products.update(payload.productId, {
           stock: newStock,
