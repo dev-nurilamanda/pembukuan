@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kasir-mandiri-v1';
+const CACHE_NAME = 'kasir-mandiri-v2';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
@@ -10,22 +10,26 @@ const PRECACHE_ASSETS = [
   '/apple-touch-icon.png',
 ];
 
-// 1. Install Event: Precache essential assets
+// 1. Install Event: Skip waiting immediately and precache shell assets safely
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(PRECACHE_ASSETS);
-      })
-      .then(() => self.skipWaiting())
-      .catch((err) => {
-        console.warn('SW Precache error:', err);
-      })
+    caches.open(CACHE_NAME).then(async (cache) => {
+      // Use Promise.allSettled so a single failure never prevents SW activation
+      await Promise.allSettled(
+        PRECACHE_ASSETS.map(async (url) => {
+          try {
+            await cache.add(url);
+          } catch (err) {
+            console.warn('SW Precache failed for:', url, err);
+          }
+        })
+      );
+    })
   );
 });
 
-// 2. Activate Event: Clean old caches and take control immediately
+// 2. Activate Event: Clean old caches and take control of all clients immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
@@ -43,13 +47,12 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. Fetch Event: Network first with Cache fallback for HTML / Stale-While-Revalidate for assets
+// 3. Fetch Event: Required by Chromium for PWA installability criteria
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests and http/https schemes
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return;
 
-  // For navigation (HTML document) requests: Network First, fallback to cached '/' or '/index.html'
+  // Navigation (HTML page): Network first, fallback to cached index.html
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -69,7 +72,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For static assets (JS, CSS, images, fonts): Cache First with network update (Stale-While-Revalidate)
+  // Static assets: Cache First with background revalidation
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request)

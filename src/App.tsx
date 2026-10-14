@@ -20,6 +20,7 @@ import { CheckoutBottomSheet } from './components/CheckoutBottomSheet';
 import { CreateProductModal } from './components/CreateProductModal';
 import { DrawerMenu } from './components/DrawerMenu';
 import { WalletList } from './components/WalletList';
+import { PWAInstallBanner } from './components/PWAInstallBanner';
 
 export default function App() {
   const [activeView, setActiveView] = useState<'cashier' | 'wallets' | 'debts'>('cashier');
@@ -97,6 +98,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-slate-900 selection:text-white">
+      {/* PWA Install Notification Bar */}
+      <PWAInstallBanner />
+
       {/* 1. HEADER ATAS (Putih Bersih Monokrom Menyatu dengan Layar HP) */}
       <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between gap-3">

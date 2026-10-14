@@ -9,6 +9,8 @@
   "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#4f46e5",
+  "prefer_related_applications": false,
+  "categories": ["business", "finance", "productivity", "utilities"],
   "icons": [
     {
       "src": "/icon-192.png",
