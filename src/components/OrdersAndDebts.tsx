@@ -54,40 +54,38 @@ export const OrdersAndDebts: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 pb-20 -mx-4">
-      {/* Piutang Warning Banner if any */}
+    <div className="-mx-4 pb-20">
+      {/* Piutang Warning Banner (Lega & Edge-to-Edge jika ada) */}
       {unpaidCount > 0 && (
-        <div className="mx-4 bg-white border border-slate-300 rounded-2xl p-4 flex items-center justify-between shadow-2xs">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center shrink-0">
-              <Clock className="w-5 h-5" />
-            </div>
+        <div className="px-4 py-3.5 bg-amber-50/80 border-b border-amber-200/70 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <Clock className="w-4 h-4 text-amber-700 shrink-0" />
             <div>
-              <h4 className="text-sm font-bold text-slate-900">
+              <span className="text-xs font-bold text-amber-950 block">
                 {unpaidCount} Tagihan Belum Lunas
-              </h4>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Total piutang: <strong className="text-slate-900">{formatRupiah(totalUnpaidNominal)}</strong>
-              </p>
+              </span>
+              <span className="text-xs text-amber-800">
+                Total piutang: <strong>{formatRupiah(totalUnpaidNominal)}</strong>
+              </span>
             </div>
           </div>
           <button
             onClick={() => setFilter('UNPAID')}
-            className="px-3.5 py-2 bg-slate-900 active:bg-black text-white rounded-xl text-xs font-bold transition shadow-2xs cursor-pointer active:scale-95"
+            className="px-3 py-1.5 bg-slate-900 active:bg-black text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer shrink-0"
           >
             Lihat
           </button>
         </div>
       )}
 
-      {/* Filter Tabs - Clean Horizontal Bar */}
-      <div className="px-4 flex items-center gap-2">
+      {/* Filter Tabs - Clean Horizontal Bar (Edge-to-Edge dengan px-4) */}
+      <div className="px-4 py-3 bg-white border-b border-slate-200 flex items-center gap-2 overflow-x-auto no-scrollbar">
         <button
           onClick={() => setFilter('ALL')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${
             filter === 'ALL'
-              ? 'bg-slate-900 text-white shadow-2xs'
-              : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200 active:bg-slate-200'
           }`}
         >
           Semua ({transactions.length})
@@ -95,10 +93,10 @@ export const OrdersAndDebts: React.FC = () => {
 
         <button
           onClick={() => setFilter('UNPAID')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 active:scale-95 ${
             filter === 'UNPAID'
-              ? 'bg-slate-900 text-white shadow-2xs'
-              : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200 active:bg-slate-200'
           }`}
         >
           <span>Piutang</span>
@@ -115,10 +113,10 @@ export const OrdersAndDebts: React.FC = () => {
 
         <button
           onClick={() => setFilter('PAID')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${
+          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer active:scale-95 ${
             filter === 'PAID'
-              ? 'bg-slate-900 text-white shadow-2xs'
-              : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200 active:bg-slate-200'
           }`}
         >
           Lunas

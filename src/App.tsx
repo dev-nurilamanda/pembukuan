@@ -10,6 +10,7 @@ import {
   X,
   CheckCircle2,
   WifiOff,
+  Plus,
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, seedDefaultWallets, seedDefaultProducts, type Product } from './db/db';
@@ -102,10 +103,10 @@ export default function App() {
       {/* PWA Install Notification Bar */}
       <PWAInstallBanner />
 
-      {/* 1. HEADER ATAS (Putih Bersih Monokrom Menyatu dengan Layar HP) */}
+      {/* 1. HEADER ATAS (Putih Bersih Monokrom - Lebar & Padding Standar Identik di Seluruh Layar) */}
       <header className="sticky top-0 z-40 bg-white border-b border-slate-200">
-        <div className={`w-full ${activeView === 'products' ? 'px-3' : 'max-w-md mx-auto px-4'} py-3.5 flex items-center justify-between gap-3`}>
-          {/* Kiri: Hamburger Menu */}
+        <div className="max-w-md mx-auto px-4 py-3.5 flex items-center justify-between gap-3">
+          {/* Kiri: Hamburger Menu Garis Tiga (Tetap untuk Semua Halaman) */}
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => setIsDrawerOpen(true)}
@@ -125,8 +126,19 @@ export default function App() {
             </h1>
           </div>
 
-          {/* Kanan: Search Icon & Offline Indicator */}
+          {/* Kanan: Action Buttons & Offline Indicator */}
           <div className="flex items-center gap-1.5">
+            {activeView === 'products' && (
+              <button
+                onClick={() => setIsCreateProductOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-black active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer shrink-0"
+                title="Tambah Produk Baru"
+              >
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>Tambah</span>
+              </button>
+            )}
+
             {activeView === 'cashier' && subTab === 'katalog' && (
               <button
                 onClick={() => setIsSearchActive(!isSearchActive)}
@@ -231,8 +243,8 @@ export default function App() {
         </div>
       )}
 
-      {/* 3. MAIN CONTENT CONTAINER (Edge-to-Edge on Mobile & Products Full Width) */}
-      <main className={`flex-1 w-full overflow-x-hidden ${activeView === 'products' ? 'w-full min-h-screen px-3 py-1' : 'max-w-md mx-auto px-4 py-0'}`}>
+      {/* 3. MAIN CONTENT CONTAINER (Lebar & Padding Standar max-w-md mx-auto px-4 py-0 Identik 100%) */}
+      <main className="flex-1 w-full overflow-x-hidden max-w-md mx-auto px-4 py-0">
         {activeView === 'cashier' ? (
           <>
             {subTab === 'katalog' && (
@@ -257,43 +269,11 @@ export default function App() {
             )}
           </>
         ) : activeView === 'products' ? (
-          <div className="space-y-2 py-1.5 w-full">
-            <div className="flex items-center justify-end pb-0.5">
-              <button
-                onClick={() => setActiveView('cashier')}
-                className="text-xs font-bold text-slate-700 hover:text-slate-900 active:underline cursor-pointer"
-              >
-                &larr; Kembali ke Kasir
-              </button>
-            </div>
-            <ProductManagement onBackToCashier={() => setActiveView('cashier')} />
-          </div>
+          <ProductManagement onBackToCashier={() => setActiveView('cashier')} />
         ) : activeView === 'wallets' ? (
-          <div className="space-y-3 py-3">
-            <div className="flex items-center justify-between pb-1">
-              <span className="text-xs font-bold text-slate-700">Manajemen Saldo Modal</span>
-              <button
-                onClick={() => setActiveView('cashier')}
-                className="text-xs font-bold text-slate-900 active:underline cursor-pointer"
-              >
-                &larr; Kembali ke Kasir
-              </button>
-            </div>
-            <WalletList />
-          </div>
+          <WalletList />
         ) : (
-          <div className="space-y-3 py-3">
-            <div className="flex items-center justify-between pb-1">
-              <span className="text-xs font-bold text-slate-700">Pelacakan Tagihan & Piutang</span>
-              <button
-                onClick={() => setActiveView('cashier')}
-                className="text-xs font-bold text-slate-900 active:underline cursor-pointer"
-              >
-                &larr; Kembali ke Kasir
-              </button>
-            </div>
-            <OrdersAndDebts />
-          </div>
+          <OrdersAndDebts />
         )}
       </main>
 

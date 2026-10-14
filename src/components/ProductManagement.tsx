@@ -316,62 +316,48 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
   };
 
   return (
-    <div className="w-full space-y-2.5 pb-20">
-      {/* 1. Header Bersih Sejajar Tanpa Subteks Boros Ruang */}
-      <div className="flex items-center justify-between gap-3 pt-0.5 w-full">
-        <h2 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-          <Package className="w-5 h-5 text-slate-800" />
-          <span>Manajemen Produk</span>
-        </h2>
+    <div className="-mx-4 pb-20">
+      {/* 1. Baris Ringkasan Metrik (Lega, Terbuka Tanpa Kotak Sempit, Padding Identik px-4) */}
+      <div className="px-4 py-3 bg-white border-b border-slate-200">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <Boxes className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span>Varian</span>
+            </div>
+            <div className="text-sm sm:text-base font-extrabold text-slate-900">
+              {summaryMetrics.totalVariants} <span className="text-xs font-normal text-slate-500">item</span>
+            </div>
+          </div>
 
-        <button
-          onClick={openCreateModal}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-black active:scale-95 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer shrink-0"
-        >
-          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>+ Tambah</span>
-        </button>
-      </div>
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <Package className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span>Aset Stok</span>
+            </div>
+            <div className="text-sm sm:text-base font-extrabold text-slate-900 truncate">
+              {formatRupiah(summaryMetrics.totalStockAssetValue)}
+            </div>
+          </div>
 
-      {/* 2. Kartu Ringkasan Finansial & Varian (Padat & Hemat Ruang) */}
-      <div className="grid grid-cols-3 gap-2 w-full">
-        <div className="bg-white border border-slate-200/90 rounded-xl px-2.5 py-1.5 shadow-2xs w-full min-w-0">
-          <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 uppercase tracking-tight">
-            <Boxes className="w-3 h-3 text-slate-400 shrink-0" />
-            <span className="truncate">Varian</span>
-          </div>
-          <div className="text-xs sm:text-sm font-black text-slate-900 mt-0.5 truncate">
-            {summaryMetrics.totalVariants} <span className="text-[10px] font-medium text-slate-500">item</span>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/90 rounded-xl px-2.5 py-1.5 shadow-2xs w-full min-w-0">
-          <div className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 uppercase tracking-tight">
-            <Package className="w-3 h-3 text-slate-400 shrink-0" />
-            <span className="truncate">Aset Stok</span>
-          </div>
-          <div className="text-xs sm:text-sm font-black text-slate-900 truncate mt-0.5">
-            {formatRupiah(summaryMetrics.totalStockAssetValue)}
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200/90 rounded-xl px-2.5 py-1.5 shadow-2xs w-full min-w-0">
-          <div className="flex items-center gap-1 text-[10px] font-semibold text-emerald-700 uppercase tracking-tight">
-            <TrendingUp className="w-3 h-3 text-emerald-600 shrink-0" />
-            <span className="truncate">Rata Laba</span>
-          </div>
-          <div className="text-xs sm:text-sm font-black text-emerald-700 truncate mt-0.5">
-            {formatRupiah(summaryMetrics.avgProfit)}{' '}
-            <span className="text-[10px] text-emerald-600 font-semibold">
-              (+{summaryMetrics.avgMarginPercent}%)
-            </span>
+          <div className="space-y-0.5 text-right">
+            <div className="flex items-center justify-end gap-1.5 text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Rata Laba</span>
+            </div>
+            <div className="text-sm sm:text-base font-extrabold text-emerald-700 truncate">
+              {formatRupiah(summaryMetrics.avgProfit)}
+              <span className="text-[11px] font-semibold text-emerald-600 ml-1">
+                (+{summaryMetrics.avgMarginPercent}%)
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 3. Bar Pencarian & Filter Pill Mandiri (Tanpa Outer Box) */}
-      <div className="space-y-2 w-full">
-        {/* Kolom Pencarian h-11 Mandiri */}
+      {/* 2. Bar Pencarian & Dropdown Filter (Lega, Padding Identik px-4) */}
+      <div className="px-4 py-3 bg-white border-b border-slate-200 space-y-2.5">
+        {/* Kolom Pencarian */}
         <div className="relative w-full">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
           <input
@@ -379,7 +365,7 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
             placeholder="Cari nama produk, server, atau kategori..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-11 bg-white border border-slate-200 rounded-xl pl-10 pr-9 text-xs sm:text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 shadow-2xs"
+            className="w-full h-11 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-xl pl-10 pr-9 text-xs sm:text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-800 transition"
           />
           {searchQuery && (
             <button
@@ -391,14 +377,14 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
           )}
         </div>
 
-        {/* Filter Pills Berdampingan di Bawah Search */}
-        <div className="flex items-center gap-2 w-full">
-          {/* Pill Server */}
+        {/* Filter Dropdown Berdampingan */}
+        <div className="flex items-center gap-2.5 w-full">
+          {/* Dropdown Server */}
           <div className="relative flex-1 min-w-0">
             <select
               value={selectedServer}
               onChange={(e) => setSelectedServer(e.target.value)}
-              className="w-full h-9 bg-white border border-slate-200 hover:border-slate-300 rounded-full pl-3 pr-7 text-xs font-semibold text-slate-700 focus:outline-none focus:border-slate-900 shadow-2xs cursor-pointer appearance-none truncate transition"
+              className="w-full h-10 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-xl pl-3.5 pr-8 text-xs font-semibold text-slate-800 focus:outline-none focus:border-slate-800 cursor-pointer appearance-none truncate transition"
             >
               <option value="ALL">Semua Server ({products.length})</option>
               {serverOptions.map((s) => {
@@ -412,15 +398,15 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                 );
               })}
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
           </div>
 
-          {/* Pill Kategori */}
+          {/* Dropdown Kategori */}
           <div className="relative flex-1 min-w-0">
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full h-9 bg-white border border-slate-200 hover:border-slate-300 rounded-full pl-3 pr-7 text-xs font-semibold text-slate-700 focus:outline-none focus:border-slate-900 shadow-2xs cursor-pointer appearance-none truncate transition"
+              className="w-full h-10 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 rounded-xl pl-3.5 pr-8 text-xs font-semibold text-slate-800 focus:outline-none focus:border-slate-800 cursor-pointer appearance-none truncate transition"
             >
               <option value="ALL">Semua Kategori</option>
               {categoryOptions.map((c) => {
@@ -432,13 +418,13 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
                 );
               })}
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
           </div>
         </div>
 
-        {/* Active Filter Clear Indicator */}
+        {/* Indikator Filter Aktif */}
         {(selectedServer !== 'ALL' || selectedCategory !== 'ALL' || searchQuery) && (
-          <div className="flex items-center justify-between px-1 text-xs pt-0.5 w-full">
+          <div className="flex items-center justify-between text-xs pt-0.5 w-full">
             <span className="text-slate-500 font-medium text-[11px]">
               Menampilkan <strong>{filteredProducts.length}</strong> dari{' '}
               {products.length} produk
@@ -457,8 +443,8 @@ export const ProductManagement: React.FC<ProductManagementProps> = ({
         )}
       </div>
 
-      {/* 4. Daftar Produk (Edge-to-Edge List Bersih & Lega) */}
-      <div className="-mx-3 bg-white border-y border-slate-200 divide-y divide-slate-100 w-[calc(100%+1.5rem)]">
+      {/* 3. Daftar Produk (Edge-to-Edge List Bersih & Lega Identik dengan Kasir) */}
+      <div className="bg-white divide-y divide-slate-100">
         {filteredProducts.length === 0 ? (
           <div className="py-16 px-6 text-center space-y-3">
             <Package className="w-10 h-10 text-slate-300 mx-auto" />
